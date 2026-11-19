@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WasteWise — Intelligent Waste Recovery{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="container nav-inner">
+            <a href="{{ url_for('index') }}" class="brand">
+                <span class="brand-dot"></span>
+                WasteWise
+            </a>
+            <nav class="nav-links">
+                <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Home</a>
+                <a href="{{ url_for('analyzer') }}" class="{% if request.endpoint == 'analyzer' %}active{% endif %}">Waste Analyzer</a>
+                <a href="{{ url_for('ask') }}" class="{% if request.endpoint == 'ask' %}active{% endif %}">Ask Me</a>
+                <a href="{{ url_for('about') }}" class="{% if request.endpoint == 'about' %}active{% endif %}">About</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>WasteWise &middot; Intelligent Waste Recovery &amp; Regulatory Guidance</p>
+        </div>
+    </footer>
+</body>
+</html>

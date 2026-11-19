@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Ask Me — WasteWise{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Ask Me</h1>
+    <p class="subtitle">
+        Ask questions about Indian waste-management regulations. Get answers grounded in a curated collection of regulatory documents.
+    </p>
+</div>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<div class="card form-card">
+    <form method="POST" action="{{ url_for('ask') }}">
+        <div class="form-group">
+            <label for="question">Your regulatory question</label>
+            <textarea id="question" name="question" rows="3" required
+                placeholder="e.g., What are the responsibilities of consumers under the E-Waste Management Rules, 2022?">{{ question }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Ask WasteWise</button>
+    </form>
+</div>
+
+{% if result %}
+<div class="card answer-card">
+    <h3>Answer</h3>
+    <div class="answer-body">{{ result.answer }}</div>
+
+    {% if result.sources %}
+    <div class="sources-box">
+        <h4>Cited Regulatory Sources</h4>
+        <ul>
+            {% for src in result.sources %}
+            <li>{{ src.file_name }} (Page {{ src.page_number }})</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

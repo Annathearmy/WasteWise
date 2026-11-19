@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}Waste Analyzer — WasteWise{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Waste Analyzer</h1>
+    <p class="subtitle">
+        Describe your waste in everyday language. Our NLP model identifies its category and helps explore suitable recovery options.
+    </p>
+</div>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+{% if stage == "initial" %}
+<div class="card form-card">
+    <form method="POST" action="{{ url_for('analyzer') }}">
+        <input type="hidden" name="action" value="start">
+
+        <div class="form-group">
+            <label for="description">Describe the waste you have</label>
+            <textarea id="description" name="description" rows="4" required
+                placeholder="e.g., I have 10 clean empty plastic water bottles that I want to recycle">{{ state.get('description', '') }}</textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="city">City</label>
+                <input type="text" id="city" name="city" required
+                    placeholder="e.g., Bengaluru" value="{{ state.get('city', '') }}">
+            </div>
+            <div class="form-group">
+                <label for="pincode">6-Digit PIN Code</label>
+                <input type="text" id="pincode" name="pincode" pattern="\d{6}" maxlength="6" required
+                    placeholder="e.g., 560001" value="{{ state.get('pincode', '') }}">
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Analyze Waste</button>
+    </form>
+</div>
+
+{% elif stage == "clarify" %}
+<div class="card form-card">
+    <div class="status-banner">
+        <strong>Initial prediction:</strong> {{ state.model_prediction }}
+        <span class="badge">Confidence: {{ "%.1f"|format(state.model_score * 100) }}%</span>
+    </div>
+    <p class="muted">Confidence is below the threshold. Adding material or packaging details helps narrow down the exact category.</p>
+
+    <form method="POST" action="{{ url_for('analyzer') }}">
+        <input type="hidden" name="action" value="clarify">
+        <div class="form-group">
+            <label for="clarification">Please describe the item's material or packaging type</label>
+            <input type="text" id="clarification" name="clarification" required
+                placeholder="e.g., rigid HDPE plastic container, multilayer foil pouch, corrugated cardboard">
+        </div>
+        <div class="button-row">
+            <button type="submit" class="btn btn-primary">Refine Classification</button>
+            <button type="submit" name="action" value="reset" class="btn btn-ghost" formnovalidate>Start Over</button>
+        </div>
+    </form>
+</div>
+
+{% elif stage == "select_category" %}
+<div class="card form-card">
+    <div class="status-banner">
+        <strong>Classification remains uncertain</strong>
+        <span class="badge">Top guess: {{ state.model_prediction }} ({{ "%.1f"|format(state.model_score * 100) }}%)</span>
+    </div>
+    <p class="muted">Select the closest matching category from the top predictions, suggest a new category, or skip.</p>
+
+    <form method="POST" action="{{ url_for('analyzer') }}">
+        <input type="hidden" name="action" value="select_category">
+
+        <div class="radio-list">
+            {% for item in state.top_candidates %}
+            <label class="radio-item">
+                <input type="radio" name="choice" value="{{ item.category }}" {% if loop.first %}checked{% endif %}>
+                <span class="radio-label">{{ loop.index }}. {{ item.category }}</span>
+                <span class="radio-score">{{ "%.1f"|format(item.score * 100) }}%</span>
+            </label>
+            {% endfor %}
+
+            <label class="radio-item">
+                <input type="radio" name="choice" value="new" id="choice_new">
+                <span class="radio-label">Suggest a new waste category</span>
+            </label>
+
+            <div class="form-group indent-box">
+                <input type="text" name="suggestion" placeholder="Enter new category name (if suggesting new)">
+            </div>
+
+            <label class="radio-item">
+                <input type="radio" name="choice" value="skip">
+                <span class="radio-label">Skip (leave unresolved)</span>
+            </label>
+        </div>
+
+        <div class="button-row">
+            <button type="submit" class="btn btn-primary">Confirm Selection</button>
+            <button type="submit" name="action" value="reset" class="btn btn-ghost" formnovalidate>Start Over</button>
+        </div>
+    </form>
+</div>
+
+{% elif stage == "confirm_details" %}
+<div class="card form-card">
+    <div class="status-banner">
+        <div>
+            <strong>Identified Category:</strong> {{ state.predicted_class }}
+            {% if state.classification_source == "USER" %}
+                <span class="badge">Selected by you</span>
+            {% elif state.model_score is not none %}
+                <span class="badge">Confidence: {{ "%.1f"|format(state.model_score * 100) }}% ({{ "%.3f"|format(state.model_score) }})</span>
+            {% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('analyzer') }}" style="margin: 0;">
+            <button type="submit" name="action" value="override_category" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;">
+                Wrong category? Choose manually
+            </button>
+        </form>
+    </div>
+
+    <form method="POST" action="{{ url_for('analyzer') }}">
+        <input type="hidden" name="action" value="confirm_details">
+
+        <div class="form-group">
+            {% if state.quantity is not none %}
+                <label for="quantity">
+                    Detected quantity: <strong>{{ state.quantity }} {{ state.quantity_unit }}</strong>. Confirm or enter a correction:
+                </label>
+                <input type="text" id="quantity" name="quantity" required
+                    value="{{ state.quantity }} {{ state.quantity_unit }}">
+            {% else %}
+                <label for="quantity">How much waste do you have? (e.g., 5 items or 2 kg)</label>
+                <input type="text" id="quantity" name="quantity" required
+                    placeholder="e.g., 5 items or 2 kg">
+            {% endif %}
+        </div>
+
+        {% if not state.condition %}
+        <div class="form-group">
+            <label for="condition_input">What is the condition of the waste?</label>
+            <input type="text" id="condition_input" name="condition_input" required
+                placeholder="empty and clean / unwashed / broken / other">
+        </div>
+        {% else %}
+        <p class="detected-note"><strong>Detected condition:</strong> {{ state.condition | join(', ') }}</p>
+        {% endif %}
+
+        {% if not state.user_intent %}
+        <div class="form-group">
+            <label for="intent_input">Preferred recovery option</label>
+            <select id="intent_input" name="intent_input">
+                <option value="any">Consider any option</option>
+                <option value="recycle">Recycle</option>
+                <option value="sell">Sell</option>
+                <option value="donate">Donate</option>
+                <option value="reuse">Reuse / Upcycle</option>
+                <option value="dispose">Dispose</option>
+            </select>
+        </div>
+        {% else %}
+        <p class="detected-note"><strong>Detected recovery intent:</strong> {{ state.user_intent | join(', ') }}</p>
+        {% endif %}
+
+        <div class="button-row">
+            <button type="submit" class="btn btn-primary">Find Recovery Options</button>
+            <button type="submit" name="action" value="reset" class="btn btn-ghost" formnovalidate>Start Over</button>
+        </div>
+    </form>
+</div>
+
+{% elif stage == "unresolved" %}
+<div class="card form-card">
+    <h3>Waste Category Unresolved</h3>
+    <p>
+        {% if state.classification_status == "NEW_CATEGORY_PENDING" %}
+            Your new category suggestion (<strong>{{ state.suggested_category }}</strong>) has been saved for review (Feedback ID: {{ state.feedback_id }}).
+        {% else %}
+            Waste category could not be identified reliably. Please provide more information before continuing.
+        {% endif %}
+    </p>
+    <form method="POST" action="{{ url_for('analyzer') }}">
+        <button type="submit" name="action" value="reset" class="btn btn-primary">Try Another Description</button>
+    </form>
+</div>
+
+{% elif stage == "results" %}
+<div class="card summary-card">
+    <div class="summary-header">
+        <div>
+            <span class="eyebrow">CONFIRMED WASTE SUMMARY</span>
+            <h2>{{ state.user_info.predicted_class }}</h2>
+        </div>
+        <form method="POST" action="{{ url_for('analyzer') }}">
+            <button type="submit" name="action" value="reset" class="btn btn-secondary">Analyze Another Item</button>
+        </form>
+    </div>
+
+    <div class="meta-grid">
+        <div><span class="meta-label">Quantity</span><strong>{{ state.user_info.quantity }} {{ state.user_info.quantity_unit }}</strong></div>
+        <div><span class="meta-label">Condition</span><strong>{{ state.user_info.condition | join(', ') }}</strong></div>
+        <div><span class="meta-label">Intent</span><strong>{{ state.user_info.user_intent | join(', ') }}</strong></div>
+        <div><span class="meta-label">Location</span><strong>{{ state.user_info.city }} ({{ state.user_info.pincode }})</strong></div>
+    </div>
+</div>
+
+<h3 class="section-title">Recovery Recommendations</h3>
+
+{% if state.recommendations %}
+<div class="results-grid">
+    {% for partner in state.recommendations %}
+    <div class="card partner-card">
+        <div class="partner-top">
+            <h4>{{ partner.organization_name }}</h4>
+            <span class="badge {% if partner.verification_status == 'VERIFIED' %}badge-verified{% else %}badge-demo{% endif %}">
+                {{ partner.verification_status }}
+            </span>
+        </div>
+        <p class="partner-type">{{ partner.partner_type }} &middot; Method: <strong>{{ partner.recovery_method }}</strong></p>
+        <ul class="partner-details">
+            <li><strong>Accepted waste:</strong> {{ partner.waste_class }}</li>
+            {% if partner.preparation_instructions %}
+            <li><strong>Preparation:</strong> {{ partner.preparation_instructions }}</li>
+            {% endif %}
+            <li><strong>Pickup available:</strong> {{ "Yes" if partner.pickup_available else "No" }}</li>
+            <li><strong>Drop-off available:</strong> {{ "Yes" if partner.dropoff_available else "No" }}</li>
+            {% if partner.contact %}
+            <li><strong>Contact:</strong> {{ partner.contact }}</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <p>No suitable recovery organisations are currently listed for <strong>{{ state.user_info.predicted_class }}</strong> in <strong>{{ state.user_info.city }} ({{ state.user_info.pincode }})</strong> matching your quantity, condition, and intent.</p>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

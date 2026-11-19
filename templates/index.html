@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}WasteWise — Intelligent Waste Recovery{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <span class="eyebrow">INTELLIGENT WASTE RECOVERY</span>
+    <h1>WasteWise</h1>
+    <p class="hero-tagline">Understand waste. Discover possibilities.</p>
+    <p class="hero-lead">Waste isn't the end of the story.</p>
+    <p class="hero-body">
+        Understand what you throw away. Discover how it can be reused, recycled, donated or recovered
+        through intelligent waste classification and recovery recommendations.
+    </p>
+
+    <div class="hero-actions">
+        <a href="{{ url_for('analyzer') }}" class="btn btn-primary">Waste Analyzer</a>
+        <a href="{{ url_for('ask') }}" class="btn btn-secondary">Ask Me</a>
+    </div>
+</section>
+
+<section class="feature-grid">
+    <div class="card">
+        <h3>Waste Analyzer</h3>
+        <p>Describe household items in everyday language. Our NLP pipeline identifies the waste category, extracts quantity and condition, and matches local recovery options.</p>
+        <a href="{{ url_for('analyzer') }}" class="text-link">Start analyzing &rarr;</a>
+    </div>
+    <div class="card">
+        <h3>Ask Me</h3>
+        <p>Ask questions about Indian waste-management regulations and receive structured answers grounded in official gazette notifications with cited sources.</p>
+        <a href="{{ url_for('ask') }}" class="text-link">Ask a question &rarr;</a>
+    </div>
+</section>
+{% endblock %}

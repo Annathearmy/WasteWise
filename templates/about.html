@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}About WasteWise{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>About WasteWise</h1>
+</div>
+
+<div class="card about-card">
+    <p class="lead">
+        WasteWise is an NLP-based household waste recovery system designed to help people make more informed decisions about discarded items.
+    </p>
+    <p>
+        Instead of relying only on predefined forms, the system interprets natural-language descriptions and combines machine learning with structured recovery rules.
+    </p>
+
+    <h2>How it works</h2>
+    <ol class="steps-list">
+        <li><strong>Text understanding:</strong> Sentence Transformer embeddings represent user descriptions.</li>
+        <li><strong>Classification:</strong> Logistic Regression predicts one of 50 waste categories.</li>
+        <li><strong>Information extraction:</strong> Regex and keyword-based methods extract quantity, condition and recovery intent.</li>
+        <li><strong>Recovery matching:</strong> SQLite records are filtered using category, location and eligibility rules.</li>
+        <li><strong>Regulatory guidance:</strong> A RAG pipeline retrieves relevant regulatory information and generates grounded responses.</li>
+    </ol>
+
+    <h2>Technology stack</h2>
+    <p class="tech-stack">
+        Python &middot; Sentence Transformers &middot; Scikit-learn &middot; Logistic Regression &middot; SQLite &middot; ChromaDB &middot; LlamaIndex &middot; Gemini &middot; Flask
+    </p>
+
+    <h2>Current limitations</h2>
+    <ul class="limits-list">
+        <li>Recovery organisation records include demonstration entries.</li>
+        <li>Classification confidence does not guarantee a correct prediction.</li>
+        <li>Recovery matching depends on available database records.</li>
+        <li>Regulatory answers should be checked against the cited official documents.</li>
+    </ul>
+
+    <div class="transparency-box">
+        <h3>Transparency matters.</h3>
+        <p>
+            WasteWise does not claim to verify real-world recovery partners or guarantee that a suggested recovery pathway is available.
+        </p>
+    </div>
+</div>
+{% endblock %}
