@@ -66,7 +66,7 @@ def _ensure_rag_initialized():
         raise ValueError("GEMINI_API_KEY is not configured. Please set it in your .env file or environment.")
 
     llm = GoogleGenAI(
-        model="gemini-2.5-flash",
+        model="gemini-3.5-flash",
         api_key=api_key
     )
 
