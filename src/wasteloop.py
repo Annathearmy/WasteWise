@@ -56,21 +56,11 @@ def initialize_wasteloop(
     DB_PATH = db_path
     if not os.path.isfile(DB_PATH):
         raise FileNotFoundError(f"WasteLoop database not found: {DB_PATH}")
-    if not os.path.isdir(embedding_model_path):
-        raise FileNotFoundError(
-            f"Sentence Transformer directory not found: {embedding_model_path}"
-        )
     if not os.path.isfile(classifier_path):
         raise FileNotFoundError(f"Classifier file not found: {classifier_path}")
 
-    try:
-        from sentence_transformers import SentenceTransformer
-    except ImportError as exc:
-        raise ImportError(
-            "sentence-transformers is required for WasteLoop inference. "
-            "Install it with: pip install sentence-transformers"
-        ) from exc
-    embedding_model = SentenceTransformer(embedding_model_path)
+    from src.shared_embedder import get_shared_embedder
+    embedding_model = get_shared_embedder()
     embedding_classifier = joblib.load(classifier_path)
 
     with sqlite3.connect(DB_PATH) as conn:
@@ -78,7 +68,7 @@ def initialize_wasteloop(
         if integrity != "ok":
             raise sqlite3.DatabaseError(f"Database integrity check failed: {integrity}")
 
-    print("WasteLoop models loaded.")
+    print("WasteLoop models loaded (shared ONNX runtime).")
     print(f"Classifier categories: {len(embedding_classifier.classes_)}")
     print(f"Database: {DB_PATH}")
     return embedding_model, embedding_classifier
