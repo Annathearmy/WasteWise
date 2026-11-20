@@ -9,16 +9,16 @@ from llama_index.core import (
     PromptTemplate,
 )
 from llama_index.vector_stores.chroma import ChromaVectorStore
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.core.response_synthesizers import get_response_synthesizer
+
+from src.shared_embedder import SharedLlamaIndexEmbedding
 
 nest_asyncio.apply()
 
 DEFAULT_PROJECT_PATH = str(Path(__file__).resolve().parent.parent)
 PROJECT_PATH = os.environ.get("WASTEWISE_PROJECT_PATH", DEFAULT_PROJECT_PATH)
 
-MODEL_PATH = os.path.join(PROJECT_PATH, "Models", "sentence_transformer")
 CHROMA_PATH = os.path.join(PROJECT_PATH, "Database", "chromadb")
 
 _retriever = None
@@ -40,11 +40,8 @@ def _ensure_rag_initialized():
         chroma_collection=knowledge_collection
     )
 
-    # Load the existing embedding model
-    embed_model = HuggingFaceEmbedding(
-        model_name=MODEL_PATH,
-        normalize=True
-    )
+    # Reuse the single shared ONNX embedding model
+    embed_model = SharedLlamaIndexEmbedding()
 
     Settings.embed_model = embed_model
 
@@ -69,7 +66,7 @@ def _ensure_rag_initialized():
         raise ValueError("GEMINI_API_KEY is not configured. Please set it in your .env file or environment.")
 
     llm = GoogleGenAI(
-        model="gemini-3.5-flash-lite",
+        model="gemini-2.5-flash",
         api_key=api_key
     )
 
@@ -83,12 +80,12 @@ def _ensure_rag_initialized():
         Answer using ONLY the provided context.
 
         Rules:
-        1. Do not use outside knowledge or make assumptions.
-        2. Do not invent rules, responsibilities, dates or legal requirements.
-        3. If the context is insufficient, clearly say so.
-        4. Do not present older rules as the latest legal requirements.
-        5. Keep the answer clear and structured.
-        6. Use simple language that ordinary users can understand.
+1. Do not use outside knowledge or make assumptions.
+2. Do not invent rules, responsibilities, dates or legal requirements.
+3. If the context is insufficient, clearly say so.
+4. Do not present older rules as the latest legal requirements.
+5. Keep the answer clear and structured.
+6. Use simple language that ordinary users can understand.
 
         Context:
         {context_str}
@@ -105,7 +102,7 @@ def _ensure_rag_initialized():
         text_qa_template=qa_prompt,
         response_mode="compact"
     )
-    print("WasteWise RAG module initialized")
+    print("WasteWise RAG module initialized (shared ONNX runtime)")
 
 
 def ask_wastewise(question):
